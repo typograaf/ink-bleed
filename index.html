@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ink — Bleed / Choke</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#ffffff; --line:#dcdcdc;
+    --ink:#000000; --ink-dim:rgba(0,0,0,.45);
+    --fg:#000000;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:500 13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    display:flex; min-height:100vh;
+  }
+  #stage{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    overflow:hidden; background:#ffffff; position:relative;
+  }
+  #svg{ display:block; width:100%; height:100%; touch-action:none; cursor:grab }
+  #svg.dragging{ cursor:grabbing }
+  aside{
+    width:280px; flex:none; background:var(--panel);
+    border-left:1px solid var(--line);
+    padding:24px 22px; display:flex; flex-direction:column; gap:20px;
+    overflow-y:auto;
+  }
+  h1{ font-size:13px; font-weight:600; letter-spacing:.02em; color:var(--ink) }
+  h1 small{ display:block; font-weight:500; color:var(--ink-dim); margin-top:4px; font-size:11px }
+  .ctrl{ display:flex; flex-direction:column; gap:9px }
+  .ctrl .row{ display:flex; justify-content:space-between; align-items:baseline }
+  label{ font-size:11px; color:var(--ink) }
+  .val{ font-size:11px; color:var(--ink-dim); font-variant-numeric:tabular-nums }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:4px;
+    background:rgba(0,0,0,.15); border-radius:2px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+    background:var(--ink); cursor:pointer;
+  }
+  input[type=text],textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line);
+    color:var(--fg); padding:7px 9px; border-radius:6px; font:inherit; outline:none;
+  }
+  textarea{ resize:vertical; min-height:40px; line-height:1.35 }
+  .btns{ display:flex; gap:8px }
+  button{
+    flex:1; background:var(--bg); border:1px solid var(--line); color:var(--ink);
+    padding:9px 0; border-radius:6px; font:600 12px/1 inherit; cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  button:hover{ background:#f0f0f0 }
+  button.on{ background:var(--ink); color:var(--bg); border-color:var(--ink) }
+  .file{ position:relative; overflow:hidden }
+  .file input{ position:absolute; inset:0; opacity:0; cursor:pointer }
+  hr{ border:none; border-top:1px solid var(--line) }
+  #status{ font-size:11px; color:var(--ink-dim); word-break:break-word }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <aside>
+    <div><h1>INK<small>bleed / choke · vector silhouette</small></h1></div>
+
+    <div class="ctrl">
+      <div class="row"><label>Text <span class="val">↵ for new line</span></label></div>
+      <textarea id="text" rows="2" spellcheck="false">Bleed</textarea>
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Font size</label><span class="val" id="szVal">240</span></div>
+      <input type="range" id="sz" min="40" max="520" step="2" value="240">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Leading</label><span class="val" id="ldVal">100%</span></div>
+      <input type="range" id="ld" min="40" max="260" step="1" value="100">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Tracking</label><span class="val" id="trVal">0</span></div>
+      <input type="range" id="tr" min="-60" max="120" step="1" value="0">
+    </div>
+
+    <hr>
+
+    <div class="ctrl">
+      <div class="row"><label>Falloff size</label><span class="val" id="foVal">300</span></div>
+      <input type="range" id="fo" min="40" max="1100" step="2" value="300">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Falloff softness</label><span class="val" id="sfVal">45%</span></div>
+      <input type="range" id="sf" min="0" max="95" step="1" value="45">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Falloff bleed (− choke / + bleed)</label><span class="val" id="blVal">+22</span></div>
+      <input type="range" id="bl" min="-80" max="120" step="0.5" value="22">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Overall thickness (− / +)</label><span class="val" id="thVal">0</span></div>
+      <input type="range" id="th" min="-30" max="40" step="0.5" value="0">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Roundness in falloff</label><span class="val" id="riVal">10</span></div>
+      <input type="range" id="ri" min="0" max="70" step="0.5" value="10">
+    </div>
+
+    <div class="ctrl">
+      <div class="row"><label>Roundness outside falloff</label><span class="val" id="roVal">10</span></div>
+      <input type="range" id="ro" min="0" max="70" step="0.5" value="10">
+    </div>
+
+    <hr>
+
+    <div class="btns">
+      <button id="invert">Invert</button>
+      <button class="file">Upload font<input type="file" id="font" accept=".ttf,.otf,.woff"></button>
+    </div>
+    <div class="ctrl">
+      <div class="row"><label>File name</label></div>
+      <input type="text" id="fname" value="ink-bleed" spellcheck="false">
+    </div>
+    <div class="btns">
+      <button id="export">Export SVG</button>
+    </div>
+    <div class="btns">
+      <button id="saveSet">Save settings</button>
+      <button class="file">Load settings<input type="file" id="loadSet" accept=".json,application/json"></button>
+    </div>
+
+    <hr>
+    <div id="status">loading…</div>
+  </aside>
+
+<script src="opentype.min.js"></script>
+<script src="default-font.js"></script>
+<script>
+(function(){
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const statusEl = document.getElementById('status');
+  const svg = document.getElementById('svg');
+  const stage = document.getElementById('stage');
+
+  const ui = {
+    text:document.getElementById('text'),
+    sz:document.getElementById('sz'), szVal:document.getElementById('szVal'),
+    ld:document.getElementById('ld'), ldVal:document.getElementById('ldVal'),
+    tr:document.getElementById('tr'), trVal:document.getElementById('trVal'),
+    fo:document.getElementById('fo'), foVal:document.getElementById('foVal'),
+    sf:document.getElementById('sf'), sfVal:document.getElementById('sfVal'),
+    bl:document.getElementById('bl'), blVal:document.getElementById('blVal'),
+    th:document.getElementById('th'), thVal:document.getElementById('thVal'),
+    ri:document.getElementById('ri'), riVal:document.getElementById('riVal'),
+    ro:document.getElementById('ro'), roVal:document.getElementById('roVal'),
+    invert:document.getElementById('invert'),
+    font:document.getElementById('font'),
+    fname:document.getElementById('fname'),
+    export:document.getElementById('export'),
+    saveSet:document.getElementById('saveSet'),
+    loadSet:document.getElementById('loadSet'),
+  };
+
+  const SS = 2;      // supersample factor for the raster pipeline
+  const STEP = 2;    // marching-squares node spacing, in SS pixels (=1 CSS px)
+
+  const state = {
+    text:'Bleed', size:240, leading:100, tracking:0,
+    falloff:300, soft:45, bleed:22, thick:0, roundIn:10, roundOut:10,
+    invert:false,
+    cx:null, cy:null,            // falloff centre (CSS px); null → auto-centre
+    W:0, H:0, Wss:0, Hss:0,
+    font:null, fontName:'',
+    sdf:null,                    // signed distance field (Float32, SS res)
+  };
+
+  // ---- SVG scaffold: one solid black silhouette path + the drag handle ----
+  let pathEl, handle, handleRing, handleDot;
+  function buildScaffold(){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    pathEl = el('path',{fill:'currentColor','fill-rule':'evenodd'});
+    svg.appendChild(pathEl);
+    handle = el('g',{id:'handle','pointer-events':'none'});
+    handleRing = el('circle',{fill:'none',stroke:'#e0245e','stroke-width':'1.5',
+                              'stroke-dasharray':'5 5'});
+    handleDot  = el('circle',{r:'4',fill:'#e0245e'});
+    handle.appendChild(handleRing); handle.appendChild(handleDot);
+    svg.appendChild(handle);
+  }
+  function el(tag, attrs){
+    const n = document.createElementNS(SVGNS, tag);
+    if (attrs) for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+
+  // ---- offscreen raster ---------------------------------------------------
+  const oc = document.createElement('canvas');
+  const octx = oc.getContext('2d', { willReadFrequently:true });
+
+  function sizeSvg(){
+    state.W = stage.clientWidth; state.H = stage.clientHeight;
+    svg.setAttribute('viewBox', `0 0 ${state.W} ${state.H}`);
+    svg.setAttribute('width', state.W); svg.setAttribute('height', state.H);
+  }
+
+  function ensureRaster(){
+    const Wss = Math.max(1, Math.round(state.W*SS));
+    const Hss = Math.max(1, Math.round(state.H*SS));
+    state.Wss = Wss; state.Hss = Hss;
+    oc.width = Wss; oc.height = Hss; octx.clearRect(0,0,Wss,Hss);
+    return [Wss,Hss];
+  }
+  function buildSDF(){
+    const Wss=state.Wss, Hss=state.Hss, N=Wss*Hss;
+    if (!state.sdf || state.sdf.length !== N){
+      state.sdf = new Float32Array(N);
+      edtF = new Float32Array(N); edtG = new Float32Array(N);
+      const m = Math.max(Wss,Hss);
+      edtScratch = new Float32Array(m); edtV = new Int32Array(m);
+      edtZ = new Float32Array(m+1); edtD = new Float32Array(m);
+    }
+    computeSDF(octx.getImageData(0,0,Wss,Hss).data, Wss, Hss, state.sdf);
+  }
+
+  // Render the type as a black silhouette → signed distance field (SS res).
+  function renderType(){
+    if (!state.font){ state.sdf=null; return; }
+    const [Wss,Hss]=ensureRaster();
+    const f = state.font;
+    const size = state.size*SS;
+    const sc = size / f.unitsPerEm;
+    const track = state.tracking*SS;                     // letter spacing, px
+    const asc = f.ascender*sc, desc = f.descender*sc;    // desc is negative
+    const lineAdv = (f.ascender - f.descender)*sc * (state.leading/100);
+    const lines = (state.text || ' ').split('\n');
+    const nL = lines.length;
+    const totalH = (nL-1)*lineAdv + (asc - desc);        // top of first → bottom of last
+    const top = Hss/2 - totalH/2;
+    octx.fillStyle = '#000';
+    const lineWidth = gs => {
+      let w=0;
+      for (let i=0;i<gs.length;i++){
+        w += gs[i].advanceWidth*sc;
+        if (i<gs.length-1){ w += track + (f.getKerningValue(gs[i],gs[i+1])||0)*sc; }
+      }
+      return w;
+    };
+    for (let li=0; li<nL; li++){
+      const gs = f.stringToGlyphs(lines[li] || ' ');
+      let pen = Wss/2 - lineWidth(gs)/2;
+      const y = top + asc + li*lineAdv;                  // baseline of this line
+      let d='';
+      for (let i=0;i<gs.length;i++){
+        const g=gs[i];
+        d += g.getPath(pen, y, size).toPathData(1);
+        pen += g.advanceWidth*sc + track + (i<gs.length-1 ? (f.getKerningValue(g,gs[i+1])||0)*sc : 0);
+      }
+      if (d) octx.fill(new Path2D(d));
+    }
+    buildSDF();
+  }
+
+  // ---- signed distance field (Felzenszwalb & Huttenlocher exact EDT) -------
+  // sdf < 0 inside the type, > 0 outside, in SS pixels. Dilating the silhouette
+  // is then just "fill where sdf < offset" — true ink spread, never erasing
+  // thin strokes the way a blur+threshold would.
+  let edtF, edtG, edtScratch, edtV, edtZ, edtD;
+  const EDT_INF = 1e20;
+  function edt1d(f,n){
+    const v=edtV, z=edtZ, d=edtD;
+    let k=0; v[0]=0; z[0]=-EDT_INF; z[1]=EDT_INF;
+    for (let q=1;q<n;q++){
+      let s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]);
+      while (s<=z[k]){ k--; s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]); }
+      k++; v[k]=q; z[k]=s; z[k+1]=EDT_INF;
+    }
+    k=0;
+    for (let q=0;q<n;q++){
+      while (z[k+1]<q) k++;
+      const dx=q-v[k]; d[q]=dx*dx+f[v[k]];
+    }
+    for (let q=0;q<n;q++) f[q]=d[q];
+  }
+  function edt2d(f,w,h){
+    const buf=edtScratch;
+    for (let x=0;x<w;x++){
+      for (let y=0;y<h;y++) buf[y]=f[y*w+x];
+      edt1d(buf,h);
+      for (let y=0;y<h;y++) f[y*w+x]=buf[y];
+    }
+    for (let y=0;y<h;y++){
+      const off=y*w;
+      for (let x=0;x<w;x++) buf[x]=f[off+x];
+      edt1d(buf,w);
+      for (let x=0;x<w;x++) f[off+x]=buf[x];
+    }
+  }
+  function computeSDF(data,w,h,out){
+    const N=w*h;
+    for (let p=0,q=3;p<N;p++,q+=4){
+      const ins = data[q]>=128;
+      edtF[p] = ins ? 0 : EDT_INF;   // feature = inside  → sq-dist to nearest inside
+      edtG[p] = ins ? EDT_INF : 0;   // feature = outside → sq-dist to nearest outside
+    }
+    edt2d(edtF,w,h);
+    edt2d(edtG,w,h);
+    for (let p=0;p<N;p++){
+      const inside = edtF[p]===0;
+      out[p] = inside ? -Math.sqrt(edtG[p]) : Math.sqrt(edtF[p]);
+    }
+  }
+
+  // ---- marching squares: scalar field → closed vector contours ------------
+  const SEG = {
+    1:[['da','ab']], 2:[['ab','bc']], 3:[['da','bc']], 4:[['bc','cd']],
+    5:[['da','ab'],['bc','cd']], 6:[['ab','cd']], 7:[['da','cd']], 8:[['cd','da']],
+    9:[['cd','ab']], 10:[['ab','bc'],['cd','da']], 11:[['cd','bc']], 12:[['bc','da']],
+    13:[['bc','ab']], 14:[['ab','da']]
+  };
+  function marching(G, nx, ny, step, ss){
+    const pts = new Map();      // edge key -> [x,y] (CSS)
+    const adj = new Map();      // edge key -> [neighbour keys]
+    const sc = step/ss;
+    const val = (i,j)=>G[j*nx+i];
+    const hk=(i,j)=>'H'+i+'_'+j, vk=(i,j)=>'V'+i+'_'+j;
+    function hpt(i,j){ const a=val(i,j),b=val(i+1,j); const t=a===b?0.5:a/(a-b); return [(i+t)*sc, j*sc]; }
+    function vpt(i,j){ const a=val(i,j),b=val(i,j+1); const t=a===b?0.5:a/(a-b); return [i*sc, (j+t)*sc]; }
+    function link(k1,k2){
+      let l=adj.get(k1); if(!l){l=[];adj.set(k1,l);} l.push(k2);
+      let m=adj.get(k2); if(!m){m=[];adj.set(k2,m);} m.push(k1);
+    }
+    for (let j=0;j<ny-1;j++) for (let i=0;i<nx-1;i++){
+      const a=val(i,j)>0, b=val(i+1,j)>0, c=val(i+1,j+1)>0, d=val(i,j+1)>0;
+      const cse=(a?1:0)|(b?2:0)|(c?4:0)|(d?8:0);
+      if (cse===0||cse===15) continue;
+      const E={ ab:[hk(i,j),hpt,i,j], bc:[vk(i+1,j),vpt,i+1,j],
+                cd:[hk(i,j+1),hpt,i,j+1], da:[vk(i,j),vpt,i,j] };
+      for (const [e1,e2] of SEG[cse]){
+        const A=E[e1], B=E[e2];
+        if(!pts.has(A[0])) pts.set(A[0], A[1](A[2],A[3]));
+        if(!pts.has(B[0])) pts.set(B[0], B[1](B[2],B[3]));
+        link(A[0], B[0]);
+      }
+    }
+    // stitch segments into loops
+    const contours=[]; const used=new Set();
+    const pid=(a,b)=> a<b ? a+'|'+b : b+'|'+a;
+    for (const startKey of pts.keys()){
+      const nb = adj.get(startKey)||[];
+      for (const first of nb){
+        if (used.has(pid(startKey,first))) continue;
+        const loop=[pts.get(startKey)];
+        let prev=startKey, cur=first;
+        used.add(pid(prev,cur));
+        let guard=0;
+        while (cur!==startKey && guard++<1e6){
+          loop.push(pts.get(cur));
+          const ns=adj.get(cur)||[]; let nxt=null;
+          for (const c of ns){ if(c!==prev && !used.has(pid(cur,c))){ nxt=c; break; } }
+          if (nxt===null) for (const c of ns){ if(!used.has(pid(cur,c))){ nxt=c; break; } }
+          if (nxt===null) break;
+          used.add(pid(cur,nxt)); prev=cur; cur=nxt;
+        }
+        if (loop.length>=3) contours.push(loop);
+      }
+    }
+    return contours;
+  }
+
+  // ---- grid blur (clamped box, 3 passes ≈ gaussian) -----------------------
+  function boxH(src,dst,nx,ny,r){
+    const norm=1/(2*r+1);
+    for (let y=0;y<ny;y++){
+      const o=y*nx; let acc=0;
+      for (let x=-r;x<=r;x++){ const c=x<0?0:(x>=nx?nx-1:x); acc+=src[o+c]; }
+      for (let x=0;x<nx;x++){
+        dst[o+x]=acc*norm;
+        let xo=x-r; if(xo<0)xo=0; let xi=x+r+1; if(xi>=nx)xi=nx-1;
+        acc+=src[o+xi]-src[o+xo];
+      }
+    }
+  }
+  function boxV(src,dst,nx,ny,r){
+    const norm=1/(2*r+1);
+    for (let x=0;x<nx;x++){
+      let acc=0;
+      for (let y=-r;y<=r;y++){ const c=y<0?0:(y>=ny?ny-1:y); acc+=src[c*nx+x]; }
+      for (let y=0;y<ny;y++){
+        dst[y*nx+x]=acc*norm;
+        let yo=y-r; if(yo<0)yo=0; let yi=y+r+1; if(yi>=ny)yi=ny-1;
+        acc+=src[yi*nx+x]-src[yo*nx+x];
+      }
+    }
+  }
+  function blurGrid(src,dst,tmp,nx,ny,sigma){
+    if (sigma<0.5){ dst.set(src); return; }
+    const r=Math.max(1,Math.round(sigma*0.9));
+    boxH(src,tmp,nx,ny,r); boxV(tmp,dst,nx,ny,r);
+    boxH(dst,tmp,nx,ny,r); boxV(tmp,dst,nx,ny,r);
+    boxH(dst,tmp,nx,ny,r); boxV(tmp,dst,nx,ny,r);
+  }
+
+  // ---- compose the field (falloff-weighted bleed/choke) and trace it ------
+  // The whole field (original outline + thickness + falloff bleed) is smoothed
+  // by Roundness as a smooth-union of the distance field: corners round and
+  // nearby/overlapping strokes fuse with organic ink necks into new shapes —
+  // everywhere, not just under the falloff, and without adding thickness (a
+  // field blur leaves straight edges where they are; it only rounds & merges).
+  function polyArea(c){
+    let s=0;
+    for (let i=0,n=c.length;i<n;i++){ const a=c[i], b=c[(i+1)%n]; s+=a[0]*b[1]-b[0]*a[1]; }
+    return Math.abs(s)/2;
+  }
+  let grid={};
+  function computePath(){
+    if (!state.sdf){ pathEl.setAttribute('d',''); return; }
+    const Wss=state.Wss, Hss=state.Hss, step=STEP;
+    const nx=Math.floor((Wss-1)/step)+1, ny=Math.floor((Hss-1)/step)+1;
+    const NG=nx*ny;
+    if (grid.n!==NG){
+      grid={ n:NG, raw:new Float32Array(NG), bIn:new Float32Array(NG),
+             bOut:new Float32Array(NG), tmp:new Float32Array(NG), w:new Float32Array(NG) };
+    }
+    const Graw=grid.raw, wArr=grid.w;
+    const cx=(state.cx==null?state.W/2:state.cx)*SS;
+    const cy=(state.cy==null?state.H/2:state.cy)*SS;
+    const r=Math.max(1,state.falloff*SS), soft=state.soft/100;
+    const thickG=state.thick*SS;     // global weight: + fatter / − thinner everywhere
+    const bleed=state.bleed*SS;      // extra spread, only inside the falloff
+    const sdf=state.sdf;
+    for (let j=0;j<ny;j++){
+      const ys=Math.min(j*step,Hss-1);
+      for (let i=0;i<nx;i++){
+        const xs=Math.min(i*step,Wss-1);
+        const p=ys*Wss+xs;
+        const dx=xs-cx, dy=ys-cy;
+        let dd=Math.sqrt(dx*dx+dy*dy)/r, w;
+        if (dd<=soft) w=1; else if (dd>=1) w=0;
+        else { const u=(dd-soft)/(1-soft); w=1-(u*u*(3-2*u)); }
+        const idx=j*nx+i;
+        wArr[idx]=w;
+        // dilate (bleed) / erode (choke) by an offset that grows toward centre.
+        Graw[idx] = (thickG + bleed*w) - sdf[p];
+      }
+    }
+    // round inside vs outside the falloff independently: blur the field by each
+    // amount and blend the two by the falloff weight.
+    const roundIn  = state.roundIn  * SS / STEP;
+    const roundOut = state.roundOut * SS / STEP;
+    let G;
+    if (Math.round(roundIn)===Math.round(roundOut)){
+      blurGrid(Graw, grid.bIn, grid.tmp, nx, ny, roundIn); G=grid.bIn;
+    } else {
+      blurGrid(Graw, grid.bIn,  grid.tmp, nx, ny, roundIn);
+      blurGrid(Graw, grid.bOut, grid.tmp, nx, ny, roundOut);
+      const bIn=grid.bIn, bOut=grid.bOut;
+      for (let k=0;k<NG;k++){ const w=wArr[k]; bIn[k]=bOut[k]*(1-w)+bIn[k]*w; }
+      G=bIn;
+    }
+    const contours=marching(G,nx,ny,step,SS);
+    let d='';
+    for (const c of contours){
+      if (polyArea(c) < 3) continue;            // drop sub-pixel stray loops
+      d+='M'+c[0][0].toFixed(1)+' '+c[0][1].toFixed(1);
+      for (let k=1;k<c.length;k++) d+='L'+c[k][0].toFixed(1)+' '+c[k][1].toFixed(1);
+      d+='Z';
+    }
+    pathEl.setAttribute('d', d);
+  }
+
+  function applyFalloffHandle(){
+    const cx=state.cx==null?state.W/2:state.cx;
+    const cy=state.cy==null?state.H/2:state.cy;
+    handleRing.setAttribute('cx',cx); handleRing.setAttribute('cy',cy);
+    handleRing.setAttribute('r', state.falloff);
+    handleDot.setAttribute('cx',cx); handleDot.setAttribute('cy',cy);
+  }
+  function colors(){
+    const ink = state.invert ? '#fff' : '#000';
+    const paper = state.invert ? '#000' : '#fff';
+    stage.style.background = paper; svg.style.background = paper; svg.style.color = ink;
+  }
+
+  // ---- recompute scheduler (only redo expensive stages when needed) -------
+  let pend={type:false}, raf=0;
+  function schedule(f){
+    if (f.type) pend.type=true;
+    if (raf) return;
+    raf=requestAnimationFrame(()=>{
+      raf=0;
+      if (pend.type) renderType();   // rebuilds the SDF
+      pend.type=false;
+      computePath(); applyFalloffHandle(); colors();
+    });
+  }
+
+  // ---- font loading -------------------------------------------------------
+  function loadFontBuffer(buf, name){
+    try {
+      state.font = opentype.parse(buf);
+      state.fontName = name;
+      statusEl.textContent = `${name} · ${state.font.glyphs.length} glyphs · solid vector silhouette`;
+      schedule({type:true});
+    } catch(e){ statusEl.textContent = 'Font parse failed: ' + e.message; }
+  }
+  function loadDefaultFont(){
+    try {
+      const d = window.__DEFAULT_FONT;
+      const bin = atob(d.b64), buf = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) buf[i] = bin.charCodeAt(i);
+      loadFontBuffer(buf.buffer, d.name);
+    } catch(e){ statusEl.textContent = 'default font load failed: ' + e.message; }
+  }
+  function loadFontFile(file){
+    if (!file) return;
+    const fr=new FileReader();
+    fr.onload=()=>{
+      loadFontBuffer(fr.result, file.name);
+      const base=file.name.replace(/\.[^.]+$/,'');
+      if (!ui.fname.value || ui.fname.value==='ink-bleed') ui.fname.value=base;
+    };
+    fr.readAsArrayBuffer(file);
+  }
+  ui.font.addEventListener('change', e=> loadFontFile(e.target.files[0]));
+
+  // ---- drag & drop a font anywhere on the generator -----------------------
+  const dropHint=()=>{ stage.style.outline='2px dashed #e0245e'; stage.style.outlineOffset='-8px'; };
+  const dropClear=()=>{ stage.style.outline=''; };
+  ['dragenter','dragover'].forEach(ev=>
+    window.addEventListener(ev, e=>{ e.preventDefault(); dropHint(); }));
+  window.addEventListener('dragleave', e=>{ if(e.relatedTarget===null) dropClear(); });
+  window.addEventListener('drop', e=>{
+    e.preventDefault(); dropClear();
+    const f=[...(e.dataTransfer.files||[])].find(f=>/\.(ttf|otf|woff2?)$/i.test(f.name))
+            || e.dataTransfer.files[0];
+    loadFontFile(f);
+  });
+
+  // ---- drag the falloff ---------------------------------------------------
+  function svgPt(e){ const rc=svg.getBoundingClientRect(); return {x:e.clientX-rc.left,y:e.clientY-rc.top}; }
+  let dragging=false;
+  svg.addEventListener('pointerdown', e=>{
+    dragging=true; svg.classList.add('dragging'); svg.setPointerCapture(e.pointerId);
+    const p=svgPt(e); state.cx=p.x; state.cy=p.y; schedule({});
+  });
+  svg.addEventListener('pointermove', e=>{
+    if(!dragging) return; const p=svgPt(e); state.cx=p.x; state.cy=p.y; schedule({});
+  });
+  const endDrag=()=>{ dragging=false; svg.classList.remove('dragging'); };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+  // scroll/wheel over the canvas resizes the falloff
+  svg.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const min=+ui.fo.min, max=+ui.fo.max;
+    let v = state.falloff - e.deltaY * (max-min)/3000;
+    v = Math.max(min, Math.min(max, v));
+    state.falloff = v;
+    ui.fo.value = v; ui.foVal.textContent = v.toFixed(0);
+    schedule({});
+  }, {passive:false});
+
+  // ---- wiring -------------------------------------------------------------
+  ui.text.addEventListener('input', e=>{ state.text=e.target.value; schedule({type:true}); });
+  const RANGES=[
+    ['sz','size','szVal', v=>v.toFixed(0), {type:true}],
+    ['ld','leading','ldVal', v=>v.toFixed(0)+'%', {type:true}],
+    ['tr','tracking','trVal', v=>(v>0?'+':'')+v, {type:true}],
+    ['fo','falloff','foVal', v=>v.toFixed(0), {}],
+    ['sf','soft','sfVal', v=>v.toFixed(0)+'%', {}],
+    ['bl','bleed','blVal', v=>(v>0?'+':'')+v.toFixed(1).replace(/\.0$/,''), {}],
+    ['th','thick','thVal', v=>(v>0?'+':'')+v, {}],
+    ['ri','roundIn','riVal', v=>v.toFixed(1).replace(/\.0$/,''), {}],
+    ['ro','roundOut','roVal', v=>v.toFixed(1).replace(/\.0$/,''), {}],
+  ];
+  for (const [id,key,valId,fmt,flags] of RANGES){
+    const inp=ui[id], out=document.getElementById(valId);
+    inp.addEventListener('input', e=>{ state[key]=+e.target.value; out.textContent=fmt(state[key]); schedule(flags); });
+  }
+  function syncControls(){
+    for (const [id,key,valId,fmt] of RANGES){
+      ui[id].value=state[key]; document.getElementById(valId).textContent=fmt(state[key]);
+    }
+    ui.text.value=state.text;
+    ui.invert.classList.toggle('on', state.invert);
+  }
+  ui.invert.addEventListener('click', ()=>{
+    state.invert=!state.invert; ui.invert.classList.toggle('on',state.invert); colors();
+  });
+
+  // ---- export -------------------------------------------------------------
+  function buildExportSVG(){
+    const ink=state.invert?'#fff':'#000', paper=state.invert?'#000':'#fff';
+    const out=el('svg',{xmlns:SVGNS,viewBox:`0 0 ${state.W} ${state.H}`,
+                        width:state.W,height:state.H});
+    out.appendChild(el('rect',{x:0,y:0,width:state.W,height:state.H,fill:paper}));
+    out.appendChild(el('path',{d:pathEl.getAttribute('d')||'','fill-rule':'evenodd',fill:ink}));
+    return '<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(out);
+  }
+  function fileName(ext){
+    let n=(ui.fname.value||'ink-bleed').trim().replace(/[\/\\:*?"<>|]+/g,'-').replace(/\s+/g,'-');
+    n=n.replace(/\.(svg|json)$/i,'');
+    return n+'.'+ext;
+  }
+  function download(text, type, name){
+    const blob=new Blob([text],{type});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=name;
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+  ui.export.addEventListener('click', ()=> download(buildExportSVG(),'image/svg+xml',fileName('svg')) );
+
+  // ---- save / load settings ----------------------------------------------
+  const SETTING_KEYS=['text','size','leading','tracking','falloff','soft','bleed',
+                      'thick','roundIn','roundOut','invert','cx','cy'];
+  ui.saveSet.addEventListener('click', ()=>{
+    const out={ _tool:'ink-bleed', _v:1 };
+    for (const k of SETTING_KEYS) out[k]=state[k];
+    out.fname=ui.fname.value;
+    download(JSON.stringify(out,null,2),'application/json',fileName('json'));
+  });
+  ui.loadSet.addEventListener('change', e=>{
+    const file=e.target.files[0]; if(!file) return;
+    const fr=new FileReader();
+    fr.onload=()=>{
+      try {
+        const o=JSON.parse(fr.result);
+        if ('round' in o && !('roundIn' in o)){ o.roundIn=o.round; o.roundOut=o.round; }
+        for (const k of SETTING_KEYS) if (k in o) state[k]=o[k];
+        if (typeof o.fname==='string') ui.fname.value=o.fname;
+        syncControls(); colors(); schedule({type:true});
+        statusEl.textContent='settings loaded · '+file.name;
+      } catch(err){ statusEl.textContent='settings load failed: '+err.message; }
+    };
+    fr.readAsText(file);
+    e.target.value='';
+  });
+
+  // ---- boot ---------------------------------------------------------------
+  buildScaffold(); sizeSvg(); colors();
+  loadDefaultFont();
+  new ResizeObserver(()=>{ sizeSvg(); schedule({type:true}); }).observe(stage);
+})();
+</script>
+</body>
+</html>
