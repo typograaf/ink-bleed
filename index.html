@@ -75,50 +75,50 @@
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Font size</label><span class="val" id="szVal">130</span></div>
-      <input type="range" id="sz" min="40" max="520" step="2" value="130">
+      <div class="row"><label>Font size</label><span class="val" id="szVal">240</span></div>
+      <input type="range" id="sz" min="40" max="520" step="2" value="240">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Leading</label><span class="val" id="ldVal">100%</span></div>
-      <input type="range" id="ld" min="40" max="260" step="1" value="100">
+      <div class="row"><label>Leading</label><span class="val" id="ldVal">95%</span></div>
+      <input type="range" id="ld" min="40" max="260" step="1" value="95">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Tracking</label><span class="val" id="trVal">0</span></div>
-      <input type="range" id="tr" min="-60" max="120" step="1" value="0">
+      <div class="row"><label>Tracking</label><span class="val" id="trVal">-14</span></div>
+      <input type="range" id="tr" min="-60" max="120" step="1" value="-14">
     </div>
 
     <hr>
 
     <div class="ctrl">
-      <div class="row"><label>Falloff size</label><span class="val" id="foVal">250</span></div>
-      <input type="range" id="fo" min="40" max="1100" step="2" value="250">
+      <div class="row"><label>Falloff size</label><span class="val" id="foVal">289</span></div>
+      <input type="range" id="fo" min="40" max="1100" step="2" value="289">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Falloff softness</label><span class="val" id="sfVal">45%</span></div>
-      <input type="range" id="sf" min="0" max="95" step="1" value="45">
+      <div class="row"><label>Falloff softness</label><span class="val" id="sfVal">0%</span></div>
+      <input type="range" id="sf" min="0" max="95" step="1" value="0">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Falloff bleed (− choke / + bleed)</label><span class="val" id="blVal">+11</span></div>
-      <input type="range" id="bl" min="-80" max="120" step="0.5" value="11">
+      <div class="row"><label>Falloff bleed (− choke / + bleed)</label><span class="val" id="blVal">+8</span></div>
+      <input type="range" id="bl" min="-80" max="120" step="0.5" value="8">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Overall thickness (− / +)</label><span class="val" id="thVal">0</span></div>
-      <input type="range" id="th" min="-30" max="40" step="0.5" value="0">
+      <div class="row"><label>Overall thickness (− / +)</label><span class="val" id="thVal">-6</span></div>
+      <input type="range" id="th" min="-30" max="40" step="0.5" value="-6">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Roundness in falloff</label><span class="val" id="riVal">6</span></div>
-      <input type="range" id="ri" min="0" max="70" step="0.5" value="6">
+      <div class="row"><label>Roundness in falloff</label><span class="val" id="riVal">17</span></div>
+      <input type="range" id="ri" min="0" max="70" step="0.5" value="17">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Roundness outside falloff</label><span class="val" id="roVal">4</span></div>
-      <input type="range" id="ro" min="0" max="70" step="0.5" value="4">
+      <div class="row"><label>Roundness outside falloff</label><span class="val" id="roVal">6.5</span></div>
+      <input type="range" id="ro" min="0" max="70" step="0.5" value="6.5">
     </div>
 
     <hr>
@@ -175,8 +175,8 @@
   const STEP = 2;    // marching-squares node spacing, in SS pixels (=1 CSS px)
 
   const state = {
-    text:'DELTA IPA', size:130, leading:100, tracking:0,
-    falloff:250, soft:45, bleed:11, thick:0, roundIn:6, roundOut:4,
+    text:'DELTA IPA', size:240, leading:95, tracking:-14,
+    falloff:289, soft:0, bleed:8, thick:-6, roundIn:17, roundOut:6.5,
     invert:false,
     cx:null, cy:null,            // falloff centre (CSS px); null → auto-centre
     W:0, H:0, Wss:0, Hss:0,
