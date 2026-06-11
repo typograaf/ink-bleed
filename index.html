@@ -71,12 +71,12 @@
 
     <div class="ctrl">
       <div class="row"><label>Text <span class="val">↵ for new line</span></label></div>
-      <textarea id="text" rows="2" spellcheck="false">Bleed</textarea>
+      <textarea id="text" rows="2" spellcheck="false">DELTA IPA</textarea>
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Font size</label><span class="val" id="szVal">240</span></div>
-      <input type="range" id="sz" min="40" max="520" step="2" value="240">
+      <div class="row"><label>Font size</label><span class="val" id="szVal">130</span></div>
+      <input type="range" id="sz" min="40" max="520" step="2" value="130">
     </div>
 
     <div class="ctrl">
@@ -92,8 +92,8 @@
     <hr>
 
     <div class="ctrl">
-      <div class="row"><label>Falloff size</label><span class="val" id="foVal">300</span></div>
-      <input type="range" id="fo" min="40" max="1100" step="2" value="300">
+      <div class="row"><label>Falloff size</label><span class="val" id="foVal">250</span></div>
+      <input type="range" id="fo" min="40" max="1100" step="2" value="250">
     </div>
 
     <div class="ctrl">
@@ -102,8 +102,8 @@
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Falloff bleed (− choke / + bleed)</label><span class="val" id="blVal">+22</span></div>
-      <input type="range" id="bl" min="-80" max="120" step="0.5" value="22">
+      <div class="row"><label>Falloff bleed (− choke / + bleed)</label><span class="val" id="blVal">+11</span></div>
+      <input type="range" id="bl" min="-80" max="120" step="0.5" value="11">
     </div>
 
     <div class="ctrl">
@@ -112,13 +112,13 @@
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Roundness in falloff</label><span class="val" id="riVal">10</span></div>
-      <input type="range" id="ri" min="0" max="70" step="0.5" value="10">
+      <div class="row"><label>Roundness in falloff</label><span class="val" id="riVal">6</span></div>
+      <input type="range" id="ri" min="0" max="70" step="0.5" value="6">
     </div>
 
     <div class="ctrl">
-      <div class="row"><label>Roundness outside falloff</label><span class="val" id="roVal">10</span></div>
-      <input type="range" id="ro" min="0" max="70" step="0.5" value="10">
+      <div class="row"><label>Roundness outside falloff</label><span class="val" id="roVal">4</span></div>
+      <input type="range" id="ro" min="0" max="70" step="0.5" value="4">
     </div>
 
     <hr>
@@ -175,8 +175,8 @@
   const STEP = 2;    // marching-squares node spacing, in SS pixels (=1 CSS px)
 
   const state = {
-    text:'Bleed', size:240, leading:100, tracking:0,
-    falloff:300, soft:45, bleed:22, thick:0, roundIn:10, roundOut:10,
+    text:'DELTA IPA', size:130, leading:100, tracking:0,
+    falloff:250, soft:45, bleed:11, thick:0, roundIn:6, roundOut:4,
     invert:false,
     cx:null, cy:null,            // falloff centre (CSS px); null → auto-centre
     W:0, H:0, Wss:0, Hss:0,
